@@ -1,0 +1,193 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>消灭星星</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="index.css">
+    <!-- <script src="index.js"></script> -->
+</head>
+
+<body>
+    <div id="pop_star">
+        <div id="targetScore">目标分数：2000</div>
+        <div id="nowScore">当前分数：0</div>
+        <div id="selectScore">0块0分</div>
+    </div>
+    <script>
+        console.log()
+        var table; //游戏桌面
+        var boardWidth = 10; //有多少行和列的方块
+        var squareWidth =Math.min(document.body.clientWidth/boardWidth,50); //每个方块的宽度
+        var squareSet = []; //当前桌面上的方块集合（二维数组，最左下角是0，0位置）
+        var timer = null; //闪烁定时器
+        var choose = []; //被选中的方块
+        var flag = true; //对点击事件加锁，消除过程中不允许有其他移入和点击操作
+        var tempSquare = null; //消除过程中如果输入移入其他方块，进行记录
+        var baseScore = 5; //基础分数
+        var stepScore = 10; //一次每多消除一个额外增加的分数
+        var totalScore = 0; //当前总分数
+        var targetScore = 2000; //目标分数
+        function createStar(value, row, col) {
+            var odiv = document.createElement("div");
+            odiv.style.width = squareWidth + "px";
+            odiv.style.height = squareWidth + "px";
+            odiv.style.display = "inline-block";
+            odiv.style.position = "absolute";
+            odiv.style.boxSizing = "border-box";
+            odiv.style.borderRadius = "12px";
+            odiv.num = value;
+            odiv.row = row;
+            odiv.col = col;
+            return odiv;
+        }
+
+        function refresh() { //所有的小方块样式还原
+            for (var i = 0; i < squareSet.length; i++) {
+                for (var j = 0; j < squareSet[i].length; j++) {
+                    if (squareSet[i][j] == null) {
+                        continue;
+                    }
+                    squareSet[i][j].row = i;
+                    squareSet[i][j].col = j;
+                    squareSet[i][j].style.transition = "left 0.3s, bottom 0.3s";
+                    squareSet[i][j].style.left = squareSet[i][j].col * squareWidth + "px";
+                    squareSet[i][j].style.bottom = squareSet[i][j].row * squareWidth + "px";
+                    squareSet[i][j].style.backgroundImage = "url('./pic/" + squareSet[i][j].num + ".png')";
+                    squareSet[i][j].style.backgroundSize = "cover";
+                    squareSet[i][j].style.transform = "scale(0.95)";
+
+                }
+            }
+        }
+
+        function checkLinked(obj) {
+            if (square == null) {
+                return;
+            }
+            choose.push(obj);
+            //下
+            // console.log(choose.indexOf(obj))
+            if (obj.row > 0 && squareSet[obj.row - 1][obj.col] && squareSet[obj.row - 1][obj.col].num === obj.num &&
+                choose.indexOf(squareSet[obj.row - 1][
+                    obj.col
+                ]) === -1) {
+                checkLinked(squareSet[obj.row - 1][obj.col]);
+            }
+            //上
+            if (obj.row < 9 && squareSet[obj.row + 1][obj.col] && squareSet[obj.row + 1][obj.col].num === obj.num &&
+                choose.indexOf(squareSet[obj.row + 1][
+                    obj.col
+                ]) === -1) {
+                checkLinked(squareSet[obj.row + 1][obj.col]);
+            }
+            //右
+            if (obj.col < 9 && squareSet[obj.row][obj.col + 1] && squareSet[obj.row][obj.col + 1].num === obj.num &&
+                choose.indexOf(squareSet[obj.row][obj
+                    .col + 1
+                ]) === -1) {
+                checkLinked(squareSet[obj.row][obj.col + 1]);
+            }
+            //左
+            if (obj.col > 0 && squareSet[obj.row][obj.col - 1] && squareSet[obj.row][obj.col - 1].num === obj.num &&
+                choose.indexOf(squareSet[obj.row][obj
+                    .col - 1
+                ]) === -1) {
+                checkLinked(squareSet[obj.row][obj.col - 1]);
+            }
+
+        }
+
+        function flicker(arr) { //小方块闪烁
+            var num = 0;
+            timer = setInterval(function () {
+                for (var i = 0; i < arr.length; i++) {
+                    arr[i].style.border = "3px solid #BFEFFF";
+                    arr[i].style.transform = "scale(" + (0.90 + 0.05 * Math.pow(-1, num)) + ")";
+                }
+                num++;
+            }, 300);
+        }
+
+        function removeFlicker(arr) {
+            clearInterval(timer)
+            for (var i = 0; i < arr.length; i++) {
+                arr[i].style.border = "none";
+                arr[i].style.transform = "scale(0.95)";
+            }
+        }
+
+        function move() {
+            for (var i = 0; i < boardWidth; i++) {
+                var pointer = 0;
+                for(var j=0;j<boardWidth;j++){
+                   if(squareSet[j][i]!==null) {
+                        if(j!=pointer){
+                            squareSet[pointer][i] =  squareSet[j][i];
+                            squareSet[pointer][i].row=pointer;
+                            squareSet[j][i]=null;
+                        }
+                        pointer++; 
+                   }
+                }
+            }
+
+            for (var i = 0; i < squareSet[0].length; i++) {
+                if(squareSet[0][i]===null){
+                    // squareSet.splice(i,1)
+                    for (var j = 0 ; j < boardWidth ; j ++) {
+                        squareSet[j].splice(i, 1);
+                     }
+                }
+                continue;
+            }
+
+
+
+            refresh();
+        }
+
+        function init() {
+            table = document.getElementById("pop_star");
+            for (var i = 0; i < boardWidth; i++) {
+                squareSet[i] = [];
+                for (var j = 0; j < boardWidth; j++) {
+                    square = createStar(Math.floor(Math.random() * 5), i, j);
+                    square.onclick = function () {
+
+                        // console.log(choose)
+                        if (choose.length < 3) return;
+                        choose.forEach(function (square) {
+                            table.removeChild(square)
+                            squareSet[square.row][square.col] = null;
+                        })
+
+                        move()
+
+                    }
+                    square.onmouseover = function () {
+                        choose = [];
+                        // console.log(this)
+                        checkLinked(this)
+                        if (choose.length > 2) {
+                            flicker(choose)
+                        }
+                    }
+                    square.onmouseout = function () {
+                        removeFlicker(choose)
+                    }
+
+                    squareSet[i][j] = square;
+                    table.appendChild(square);
+
+                }
+            }
+            refresh();
+        }
+        init();
+    </script>
+</body>
+
+</html>
